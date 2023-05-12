@@ -56,7 +56,7 @@ async def welcome(message):
 
 
 # Обработчик команд с клавиатуры
-@dp.message_handler(content_types=['text'], state=None)
+@dp.message_handler(Text(['Info', 'Литература', "AUDI Class A"]), state=None)
 async def get_message(message: types.Message):
     match message.text:
         case 'Info':
