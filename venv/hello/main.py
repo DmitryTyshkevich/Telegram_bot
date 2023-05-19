@@ -17,9 +17,9 @@ import keyboard  # импортируем файл config keyboard
 import logging  # модуль для вывода информации
 import json
 import parser
-from asyncio import set_event_loop, new_event_loop
 
-set_event_loop(new_event_loop())  # Устанавливает loop как текущий цикл событий для текущего потока ОС.(для запуска
+
+asyncio.set_event_loop(asyncio.new_event_loop())  # Устанавливает loop как текущий цикл событий для текущего потока ОС.(для запуска
 # модуля с парсером)
 
 storage = MemoryStorage()  # FSM
@@ -95,6 +95,10 @@ async def load_photo(message: types.Message, state: FSMContext):
     await message.answer('Регистрация успешно завершена!', reply_markup=keyboard.start)
     await state.finish()
 
+@dp.message_handler(state=User_registration.step_4)
+async def none_photo(message: types.Message, state: FSMContext):
+    await message.answer('Я все еще жду от Вас фото!')
+
 
 # Обработчик команд "/start" и "/restart"
 @dp.message_handler(Command(["start", "restart"]), state=None)  # задаем название команды start
@@ -112,6 +116,7 @@ async def welcome(message):
     # 2 способ вывода сообщения:
     await message.answer(f'Здравствуйте, {message.from_user.first_name}, Bot запущен',
                          reply_markup=keyboard.start)
+
 
     # после проверки и записи выводим сообщение с именем пользователя и отображаем кнопки
 
@@ -142,7 +147,8 @@ async def mailing_list(message: types.Message):
 
 
 # Обработчик команд с клавиатуры
-@dp.message_handler(Text(['Info', 'Литература', "AUDI Class A", 'Статистика']), state=None)
+@dp.message_handler(Text(['Info', 'Литература', "AUDI Class A", 'Статистика',
+                          'Покажи пользователя', 'Отправить фото', 'Загрузить фото']), state=None)
 async def get_message(message: types.Message):
     match message.text:
         case 'Info':
@@ -155,6 +161,14 @@ async def get_message(message: types.Message):
                                    reply_markup=keyboard.buttons_models_audi)
         case 'Статистика':
             await message.answer('Хочешь посмотреть статистику бота?', reply_markup=keyboard.in_stats)
+        case 'Покажи пользователя':
+            await message.answer('...',reply_markup=keyboard.inl_show_user)
+        case 'Отправить фото':
+            await bot.send_photo(message.chat.id, open('carl.jpg', 'rb'))
+        case 'Загрузить фото':
+            await message.answer('Отправьте пожалуйста фото')
+
+
 
 
 @dp.message_handler(Text(['Данные пользователя']))
@@ -219,6 +233,26 @@ async def del_registration(call: types.CallbackQuery):
     await call.message.answer('Ваши данные успешно удалены!')
     await call.answer()
 
+@dp.callback_query_handler(text_contains='show_id')
+async def print_id(call: types.CallbackQuery):
+    await call.message.answer(f'Ваш id: {call.message.chat.id}')
+    await call.answer()
+
+@dp.callback_query_handler(text_contains='back')
+async def cancel(call: types.CallbackQuery):
+    await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                text='Вы отменили выбор', parse_mode='Markdown')
+
+@dp.message_handler(content_types=types.ContentTypes.PHOTO)
+async def load_photo(message: types.Message):
+    # with open('photo.txt', 'w') as file:
+    #     file.write(message.photo[0].file_id)
+    await message.answer('Фото успешно загружено')
+    await message.answer_photo(message.photo[0].file_id)
+
+@dp.message_handler(content_types=["location"])
+def check_location(message: types.Message):
+    bot.send_message(message.chat.id, message.location.latitude, message.location.longitude)
 
 if __name__ == '__main__':
     print('Бот запущен!')
